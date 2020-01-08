@@ -4972,6 +4972,10 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 
 }
 
+#ifdef AFL_USE_MUTATION_TOOL
+static void use_mutation_tool(u8 *out_buf, s32 temp_len) {
+}
+#endif
 
 /* Take the current entry from the queue, fuzz it for a while. This
    function is a tad too long... returns 0 if fuzzed successfully, 1 if
@@ -6133,9 +6137,9 @@ havoc_stage:
  
     for (i = 0; i < use_stacking; i++) {
 
-#ifdef COMPILER_FUZZ_MUTATION_TOOL
+#ifdef AFL_USE_MUTATION_TOOL
       if (UR(64) < P_MUTATION_TOOL) {
-        use_mutation_tool(out_buf);
+        use_mutation_tool(out_buf, temp_len);
       } else
 #endif
       
