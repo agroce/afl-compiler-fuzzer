@@ -4974,6 +4974,7 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 
 #ifdef AFL_USE_MUTATION_TOOL
 static void use_mutation_tool(u8 *out_buf, s32 temp_len) {
+  /* Doesn't do anything for now. */
 }
 #endif
 
