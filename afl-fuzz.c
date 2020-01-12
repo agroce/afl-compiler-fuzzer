@@ -4973,8 +4973,22 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 }
 
 #ifdef AFL_USE_MUTATION_TOOL
-static void use_mutation_tool(u8 *out_buf, s32 temp_len) {
-  /* Doesn't do anything for now. */
+static void use_mutation_tool(u8 **out_buf, s32* temp_len) {
+  /* This is extremely slow and inefficient!! */
+  system("mkdir -p /tmp/mutation");
+  int tmp_file = open("/tmp/mutation/m.out", O_CREAT);
+  write(tmp_file, *out_buf, *temp_len);
+  close(tmp_file);
+  system("mutate /tmp/mutation/m --fuzz --mutantDir /tmp/mutation --noCheck");
+  int mutated_file = open("/tmp/mutation/m.mutant.0.out", O_RDONLY);
+  struct stat st;
+  fstat(mutated_file, &st);
+  size_t mutant_size = st.st_size;
+  u8* new_buf = ck_alloc_nozero(mutant_size);
+  ck_free(out_buf);
+  (*out_buf) = new_buf;
+  read(mutated_file, *out_buf, mutant_size);
+  (*temp_len) = mutant_size;
 }
 #endif
 
@@ -6140,7 +6154,7 @@ havoc_stage:
 
 #ifdef AFL_USE_MUTATION_TOOL
       if (UR(64) < P_MUTATION_TOOL) {
-        use_mutation_tool(out_buf, temp_len);
+        use_mutation_tool(&out_buf, &temp_len);
       } else
 #endif
       
