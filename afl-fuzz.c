@@ -4976,7 +4976,7 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 static void use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* This is extremely slow and inefficient!! */
   system("mkdir -p /tmp/mutation");
-  int tmp_file = open("/tmp/mutation/m.out", O_CREAT);
+  int tmp_file = open("/tmp/mutation/m.out", O_CREAT, S_IRWXU);
   write(tmp_file, *out_buf, *temp_len);
   close(tmp_file);
   system("mutate /tmp/mutation/m --fuzz --mutantDir /tmp/mutation --noCheck");
