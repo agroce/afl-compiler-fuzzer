@@ -4979,7 +4979,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   int tmp_file = open("/tmp/mutation/m.out", O_CREAT, S_IRWXU);
   write(tmp_file, *out_buf, *temp_len);
   close(tmp_file);
-  int r = system("mutate /tmp/mutation/m --fuzz --mutantDir /tmp/mutation --noCheck");
+  int r = system("mutate /tmp/mutation/m.out --fuzz --mutantDir /tmp/mutation --noCheck");
   if (r == 255) {
       return 0; // specific case of no mutants
   }
