@@ -4973,13 +4973,16 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 }
 
 #ifdef AFL_USE_MUTATION_TOOL
-static void use_mutation_tool(u8 **out_buf, s32* temp_len) {
+static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* This is extremely slow and inefficient!! */
   system("mkdir -p /tmp/mutation");
   int tmp_file = open("/tmp/mutation/m.out", O_CREAT, S_IRWXU);
   write(tmp_file, *out_buf, *temp_len);
   close(tmp_file);
-  system("mutate /tmp/mutation/m --fuzz --mutantDir /tmp/mutation --noCheck");
+  int r = system("mutate /tmp/mutation/m --fuzz --mutantDir /tmp/mutation --noCheck");
+  if (r == 255) {
+      return 0; // specific case of no mutants
+  }
   int mutated_file = open("/tmp/mutation/m.mutant.0.out", O_RDONLY);
   struct stat st;
   fstat(mutated_file, &st);
@@ -6153,9 +6156,12 @@ havoc_stage:
     for (i = 0; i < use_stacking; i++) {
 
 #ifdef AFL_USE_MUTATION_TOOL
+      int mutated = 0;
       if (UR(64) < P_MUTATION_TOOL) {
-        use_mutation_tool(&out_buf, &temp_len);
-      } else
+        mutated = use_mutation_tool(&out_buf, &temp_len);
+      }
+
+      if (!mutated)
 #endif
       
       switch (UR(15 + ((extras_cnt + a_extras_cnt) ? 2 : 0))) {
