@@ -4988,7 +4988,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   fstat(mutated_file, &st);
   size_t mutant_size = st.st_size;
   u8* new_buf = ck_alloc_nozero(mutant_size);
-  ck_free(out_buf);
+  ck_free(*out_buf);
   (*out_buf) = new_buf;
   read(mutated_file, *out_buf, mutant_size);
   (*temp_len) = mutant_size;
