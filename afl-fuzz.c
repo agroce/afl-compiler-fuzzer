@@ -67,6 +67,10 @@
 #include <sys/ioctl.h>
 #include <sys/file.h>
 
+#ifdef AFL_USE_MUTATION_TOOL
+#include <libgen.h>
+#endif
+
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined (__OpenBSD__)
 #  include <sys/sysctl.h>
 #endif /* __APPLE__ || __FreeBSD__ || __OpenBSD__ */
@@ -4974,22 +4978,40 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 
 #ifdef AFL_USE_MUTATION_TOOL
 static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
-  /* This is extremely slow and inefficient!! */
+  /* Returns 1 if a mutant was generated and placed in out_buf, 0 if none generated. */
+
+  /* Right now actually runs universalmutator.  This is extremely slow and inefficient!! */
+
   system("mkdir -p /tmp/mutation");
-  int tmp_file = open("/tmp/mutation/m.out", O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+  char* to_mutate = "m.out";
+  if (out_file) {
+    to_mutate = basename(out_file);
+  }
+  size_t tmp_file_name_size = strlen("/tmp/mutation/") + strlen(to_mutate) + 1;
+  char* tmp_file_name = (char*)malloc(tmp_file_name_size);
+  snprintf(tmp_file_name, tmp_file_name_size, "/tmp/mutation/%s", to_mutate);
+  int tmp_file = open(tmp_file_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
   if (tmp_file == -1) {
     printf("Aborting AFL, failed to open temp file for mutation with ERRNO=%d", errno);
     exit(255);
   }
   write(tmp_file, *out_buf, *temp_len);
   close(tmp_file);
-  int r = system("mutate /tmp/mutation/m.out --fuzz --mutantDir /tmp/mutation --noCheck >& /dev/null");
+  size_t mutation_command_size = strlen("mutate  --fuzz --mutantDir /tmp/mutation --noCheck >& /tmp/mutation/output");
+  mutation_command_size += strlen(tmp_file_name) + 1;
+  char* mutation_command = (char*)malloc(mutation_command_size);
+  snprintf(mutation_command, mutation_command_size,
+	   "mutate %s --fuzz --mutantDir /tmp/mutation --noCheck >& /tmp/mutation/output", tmp_file_name);
+  free(tmp_file_name);
+  int r = system(mutation_command);
+  free(mutation_command);
   if (r == 255) {
-      return 0; // specific case of no mutants
+    return 0; // specific case of no mutants signalled by the mutation tool
   }
-  int mutated_file = open("/tmp/mutation/m.mutant.0.out", O_RDONLY);
+  char* mutated_file_name = "fuzz.out";
+  int mutated_file = open(mutated_file_name, O_RDONLY);
   if (mutated_file == -1) {
-    return 0;
+    return 0; // File can't be opened
   }
   struct stat st;
   fstat(mutated_file, &st);
