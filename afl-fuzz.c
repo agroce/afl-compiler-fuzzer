@@ -4976,22 +4976,35 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* This is extremely slow and inefficient!! */
   system("mkdir -p /tmp/mutation");
-  int tmp_file = open("/tmp/mutation/m.out", O_CREAT, S_IRWXU);
+  int tmp_file = open("/tmp/mutation/m.out", O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+  if (tmp_file == -1) {
+    printf("ERRNO=%d", errno);
+    exit(255);
+  }
   write(tmp_file, *out_buf, *temp_len);
   close(tmp_file);
-  int r = system("mutate /tmp/mutation/m.out --fuzz --mutantDir /tmp/mutation --noCheck");
+  int r = system("mutate /tmp/mutation/m.out --fuzz --mutantDir /tmp/mutation --noCheck >& /dev/null");
   if (r == 255) {
       return 0; // specific case of no mutants
   }
   int mutated_file = open("/tmp/mutation/m.mutant.0.out", O_RDONLY);
+  if (mutated_file == -1) {
+    return 0;
+  }
   struct stat st;
   fstat(mutated_file, &st);
   size_t mutant_size = st.st_size;
+  if (mutant_size == 0) {
+    close(mutated_file);
+    return 0;
+  }
   u8* new_buf = ck_alloc_nozero(mutant_size);
   ck_free(*out_buf);
   (*out_buf) = new_buf;
   read(mutated_file, *out_buf, mutant_size);
+  close(mutated_file);
   (*temp_len) = mutant_size;
+  return 1;
 }
 #endif
 
