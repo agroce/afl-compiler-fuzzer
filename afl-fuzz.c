@@ -4978,7 +4978,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   system("mkdir -p /tmp/mutation");
   int tmp_file = open("/tmp/mutation/m.out", O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
   if (tmp_file == -1) {
-    printf("ERRNO=%d", errno);
+    printf("Aborting AFL, failed to open temp file for mutation with ERRNO=%d", errno);
     exit(255);
   }
   write(tmp_file, *out_buf, *temp_len);
