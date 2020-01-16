@@ -4977,16 +4977,11 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 }
 
 #ifdef AFL_USE_MUTATION_TOOL
-int server_started = 0;
-int out_mutant_file_opened = 0;
-int out_mutant_file = 0;
-
 static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* Returns 1 if a mutant was generated and placed in out_buf, 0 if none generated. */
 
-  /* Right now talks to universalmutator via named pipes, fairly slow and inefficient!! */
+  /* Right now actually runs universalmutator.  This is extremely slow and inefficient!! */
 
-  unlink("/tmp/mutation/fuzz.out");
   system("mkdir -p /tmp/mutation");
   char* to_mutate = "m.out";
   if (out_file) {
@@ -4995,41 +4990,29 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   size_t tmp_file_name_size = strlen("/tmp/mutation/") + strlen(to_mutate) + 1;
   char* tmp_file_name = (char*)malloc(tmp_file_name_size);
   snprintf(tmp_file_name, tmp_file_name_size, "/tmp/mutation/%s", to_mutate);
-
-  if (0 && !server_started) { // For now, you have to start the server yourself
-    size_t mutation_command_size = strlen("mutate  --fuzz --server /tmp/mutation/fuzz.out --noCheck >& /tmp/mutation/log");
-    mutation_command_size += strlen(tmp_file_name) + 1;
-    char* mutation_command = (char*)malloc(mutation_command_size);
-    snprintf(mutation_command, mutation_command_size,
-	     "mutate %s --fuzz --server /tmp/mutation/fuzz.out --noCheck >& /tmp/mutation/log", tmp_file_name);
-    system(mutation_command);
-    free(mutation_command);
-    server_started = 1;
+  int tmp_file = open(tmp_file_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+  if (tmp_file == -1) {
+    printf("Aborting AFL, failed to open temp file for mutation with ERRNO=%d", errno);
+    exit(255);
   }
-
-  if (!out_mutant_file_opened) {
-    //printf("OPENING OUTGOING MUTANT PIPE\n");    
-    out_mutant_file = open(tmp_file_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
-    if (out_mutant_file == -1) {
-      printf("Aborting AFL, failed to open temp file for outgoing source with ERRNO=%d", errno);
-      exit(255);
-    }
-    out_mutant_file_opened = 1;
-  }
-
-  //printf("SENDING INPUT TO MUTATE\n");
-  write(out_mutant_file, *out_buf, *temp_len);
-  write(out_mutant_file, "\n==END OF MUTANT==\n", strlen("\n==END OF MUTANT==\n"));
+  write(tmp_file, *out_buf, *temp_len);
+  close(tmp_file);
+  size_t mutation_command_size = strlen("mutate  --fuzz --mutantDir /tmp/mutation --noCheck >& /tmp/mutation/output");
+  mutation_command_size += strlen(tmp_file_name) + 1;
+  char* mutation_command = (char*)malloc(mutation_command_size);
+  snprintf(mutation_command, mutation_command_size,
+	   "mutate %s --fuzz --mutantDir /tmp/mutation --noCheck >& /tmp/mutation/output", tmp_file_name);
   free(tmp_file_name);
-
-  //printf("TRYING TO READ OUTPUT MUTANT\n");
-
-  char* mutated_file_name = "/tmp/mutation/fuzz.out";
-  int mutated_file = open(mutated_file_name, O_RDONLY);
-  while (mutated_file == -1) {
-    mutated_file = open(mutated_file_name, O_RDONLY);
+  int r = system(mutation_command);
+  free(mutation_command);
+  if (r == 255) {
+    return 0; // specific case of no mutants signalled by the mutation tool
   }
-
+  char* mutated_file_name = "fuzz.out";
+  int mutated_file = open(mutated_file_name, O_RDONLY);
+  if (mutated_file == -1) {
+    return 0; // File can't be opened
+  }
   struct stat st;
   fstat(mutated_file, &st);
   size_t mutant_size = st.st_size;
@@ -5043,7 +5026,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   read(mutated_file, *out_buf, mutant_size);
   close(mutated_file);
   (*temp_len) = mutant_size;
-  return 1;  
+  return 1;
 }
 #endif
 
