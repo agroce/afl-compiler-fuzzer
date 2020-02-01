@@ -4983,8 +4983,8 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* Returns 1 if a mutant was generated and placed in out_buf, 0 if none generated. */
   
   size_t pos = UR(*temp_len);
-  char* original = malloc(MAX_MUTANT_CHANGE);
-  char* replacement = malloc(MAX_MUTANT_CHANGE);
+  char* original = malloc(MAX_MUTANT_CHANGE + 1);
+  char* replacement = malloc(MAX_MUTANT_CHANGE + 1);
   switch (UR(5)) {
     case 0:
       strncpy("==", original, MAX_MUTANT_CHANGE);
