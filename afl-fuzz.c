@@ -5006,14 +5006,15 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   if (opos == NULL) {
     return 0;
   }
+  size_t oplen = opos - ((char*)*out_buf);
   size_t original_len = strnlen(original, MAX_MUTANT_CHANGE);
   size_t replacement_len = strnlen(replacement, MAX_MUTANT_CHANGE);
-  mutant_size = replacement_len - original_len;
+  size_t mutant_size = replacement_len - original_len;
   u8* new_buf = ck_alloc_nozero(mutant_size);
-  memcpy(new_buf, *out_buf, opos - *out_buf);
-  memcpy(new_buf + (opos - *out_buf), replacement, replacement_len);
-  memcpy(new_buf + (opos - *out_buf) + replacement_len, opos + original_len,
-    *temp_len - ((opos - *out_buf) + original_len));
+  memcpy(new_buf, *out_buf, oplen);
+  memcpy(new_buf + oplen, replacement, replacement_len);
+  memcpy(new_buf + oplen + replacement_len + 1, opos + original_len + 1,
+    *temp_len - (oplen + original_len + 1));
   ck_free(*out_buf);
   (*out_buf) = new_buf;
   (*temp_len) = mutant_size;
