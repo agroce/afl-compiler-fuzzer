@@ -4977,54 +4977,45 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 }
 
 #ifdef AFL_USE_MUTATION_TOOL
+#define MAX_MUTANT_CHANGE 30
+
 static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* Returns 1 if a mutant was generated and placed in out_buf, 0 if none generated. */
-
-  /* Right now actually runs universalmutator.  This is extremely slow and inefficient!! */
-
-  system("mkdir -p /tmp/mutation");
-  char* to_mutate = "m.out";
-  if (out_file) {
-    to_mutate = basename(out_file);
+  
+  size_t pos = UR(*temp_len);
+  char* original = malloc(MAX_MUTANT_CHANGE);
+  char* replacement = malloc(MAX_MUTANT_CHANGE);
+  switch (UR(5)) {
+    case 0:
+      strncpy("==", original);
+      strncpy("!=", replacement);
+    case 1:
+      strncpy("+", original);
+      strncpy("-", replacement);
+    case 2:
+      strncpy("\n", original);
+      strncpy("\nbreak;\n", replacement);
+    case 3:
+      strncpy("\n", original);
+      strncpy("\ncontinue;\n", replacement);
+    case 4:
+      strncpy("0", original);
+      strncpy("1", replacement);
   }
-  size_t tmp_file_name_size = strlen("/tmp/mutation/") + strlen(to_mutate) + 1;
-  char* tmp_file_name = (char*)malloc(tmp_file_name_size);
-  snprintf(tmp_file_name, tmp_file_name_size, "/tmp/mutation/%s", to_mutate);
-  int tmp_file = open(tmp_file_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
-  if (tmp_file == -1) {
-    printf("Aborting AFL, failed to open temp file for mutation with ERRNO=%d", errno);
-    exit(255);
-  }
-  write(tmp_file, *out_buf, *temp_len);
-  close(tmp_file);
-  size_t mutation_command_size = strlen("mutate  --fuzz --mutantDir /tmp/mutation --noCheck >& /tmp/mutation/output");
-  mutation_command_size += strlen(tmp_file_name) + 1;
-  char* mutation_command = (char*)malloc(mutation_command_size);
-  snprintf(mutation_command, mutation_command_size,
-	   "mutate %s --fuzz --mutantDir /tmp/mutation --noCheck >& /tmp/mutation/output", tmp_file_name);
-  free(tmp_file_name);
-  int r = system(mutation_command);
-  free(mutation_command);
-  if (r == 255) {
-    return 0; // specific case of no mutants signalled by the mutation tool
-  }
-  char* mutated_file_name = "fuzz.out";
-  int mutated_file = open(mutated_file_name, O_RDONLY);
-  if (mutated_file == -1) {
-    return 0; // File can't be opened
-  }
-  struct stat st;
-  fstat(mutated_file, &st);
-  size_t mutant_size = st.st_size;
-  if (mutant_size == 0) {
-    close(mutated_file);
+  const char* opos = strstr(*out_buf, original);
+  if (opos == NULL) {
     return 0;
   }
+  size_t original_len = strnlen(original, MAX_MUTANT_CHANGE);
+  size_t replacement_len = strnlen(replacement, MAX_MUTANT_CHANGE);
+  mutant_size = replacement_len - original_len;
   u8* new_buf = ck_alloc_nozero(mutant_size);
+  memcpy(new_buf, *out_buf, opos - *out_buf);
+  memcpy(new_buf + (opos - *out_buf), replacement, replacement_len);
+  memcpy(new_buf + (opos - *out_buf) + replacement_len, opos + original_len,
+    *temp_len - ((opos - *out_buf) + original_len));
   ck_free(*out_buf);
   (*out_buf) = new_buf;
-  read(mutated_file, *out_buf, mutant_size);
-  close(mutated_file);
   (*temp_len) = mutant_size;
   return 1;
 }
