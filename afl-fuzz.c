@@ -4987,20 +4987,20 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   char* replacement = malloc(MAX_MUTANT_CHANGE + 1);
   switch (UR(5)) {
     case 0:
-      strncpy("==", original, MAX_MUTANT_CHANGE);
-      strncpy("!=", replacement, MAX_MUTANT_CHANGE);
+      strncpy(original, "==", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "!=", MAX_MUTANT_CHANGE);
     case 1:
-      strncpy("+", original, MAX_MUTANT_CHANGE);
-      strncpy("-", replacement, MAX_MUTANT_CHANGE);
+      strncpy(original, "+", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "-", MAX_MUTANT_CHANGE);
     case 2:
-      strncpy("\n", original, MAX_MUTANT_CHANGE);
-      strncpy("\nbreak;\n", replacement, MAX_MUTANT_CHANGE);
+      strncpy(original, "\n", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "\nbreak;\n", MAX_MUTANT_CHANGE);
     case 3:
-      strncpy("\n", original, MAX_MUTANT_CHANGE);
-      strncpy("\ncontinue;\n", replacement, MAX_MUTANT_CHANGE);
+      strncpy(original, "\n", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "\ncontinue;\n", MAX_MUTANT_CHANGE);
     case 4:
-      strncpy("0", original, MAX_MUTANT_CHANGE);
-      strncpy("1", replacement, MAX_MUTANT_CHANGE);
+      strncpy(original, "0", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "1", MAX_MUTANT_CHANGE);
   }
   const char* opos = strstr(*out_buf + pos, original);
   if (opos == NULL) {
