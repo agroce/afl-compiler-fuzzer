@@ -5002,7 +5002,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
       strncpy("0", original, MAX_MUTANT_CHANGE);
       strncpy("1", replacement, MAX_MUTANT_CHANGE);
   }
-  const char* opos = strstr(*out_buf, original);
+  const char* opos = strstr(*out_buf + pos, original);
   if (opos == NULL) {
     return 0;
   }
