@@ -5015,8 +5015,8 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   u8* new_buf = ck_alloc_nozero(mutant_size);
   memcpy(new_buf, *out_buf, oplen);
   memcpy(new_buf + oplen, replacement, replacement_len);
-  memcpy(new_buf + oplen + replacement_len + 1, opos + original_len + 1,
-    *temp_len - (oplen + original_len + 1));
+  memcpy(new_buf + oplen + replacement_len, opos + original_len,
+    *temp_len - (oplen + original_len));
   ck_free(*out_buf);
   (*out_buf) = new_buf;
   (*temp_len) = mutant_size;
