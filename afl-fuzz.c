@@ -4974,6 +4974,8 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 
 #ifdef AFL_USE_MUTATION_TOOL
 
+#include <string.h>
+
 #define MAX_MUTANT_CHANGE 1024
 #define MAX_MUTANT_TRIES 16
 
