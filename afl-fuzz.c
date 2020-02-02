@@ -67,10 +67,6 @@
 #include <sys/ioctl.h>
 #include <sys/file.h>
 
-#ifdef AFL_USE_MUTATION_TOOL
-#include <libgen.h>
-#endif
-
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined (__OpenBSD__)
 #  include <sys/sysctl.h>
 #endif /* __APPLE__ || __FreeBSD__ || __OpenBSD__ */
@@ -4977,32 +4973,98 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 }
 
 #ifdef AFL_USE_MUTATION_TOOL
-#define MAX_MUTANT_CHANGE 30
+
+#define MAX_MUTANT_CHANGE 1024
+#define MAX_MUTANT_TRIES 16
 
 static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* Returns 1 if a mutant was generated and placed in out_buf, 0 if none generated. */
+
+  if (*temp_len < 2) {
+    return 0;
+  }
   
-  size_t pos = UR(*temp_len);
   char* original = malloc(MAX_MUTANT_CHANGE + 1);
   char* replacement = malloc(MAX_MUTANT_CHANGE + 1);
-  switch (UR(5)) {
+  char* opos;
+  for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
+    size_t pos = UR((*temp_len) - 1);
+    switch (UR(23)) {
     case 0:
+      strncpy(original, "\n", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "\nif (0)\n", MAX_MUTANT_CHANGE);
+    case 1:
+      strncpy(original, "(", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "(!", MAX_MUTANT_CHANGE);          
+    case 2:
       strncpy(original, "==", MAX_MUTANT_CHANGE);
       strncpy(replacement, "!=", MAX_MUTANT_CHANGE);
-    case 1:
+    case 3:
+      strncpy(original, "!=", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "==", MAX_MUTANT_CHANGE);
+    case 4:
+      strncpy(original, "==", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "<", MAX_MUTANT_CHANGE);
+    case 5:
+      strncpy(original, "<", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "==", MAX_MUTANT_CHANGE);         
+    case 6:
+      strncpy(original, "==", MAX_MUTANT_CHANGE);
+      strncpy(replacement, ">", MAX_MUTANT_CHANGE);
+    case 7:
+      strncpy(original, ">", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "==", MAX_MUTANT_CHANGE);      
+    case 8:
+      strncpy(original, "=", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "<", MAX_MUTANT_CHANGE);
+    case 9:
+      strncpy(original, "=", MAX_MUTANT_CHANGE);
+      strncpy(replacement, ">", MAX_MUTANT_CHANGE);            
+    case 10:
+      strncpy(original, "<", MAX_MUTANT_CHANGE);
+      strncpy(replacement, ">", MAX_MUTANT_CHANGE);
+    case 11:
+      strncpy(original, ">", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "<", MAX_MUTANT_CHANGE);
+    case 12:
+      strncpy(original, "++", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "--", MAX_MUTANT_CHANGE);
+    case 13:
+      strncpy(original, "--", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "++", MAX_MUTANT_CHANGE);      
+    case 14:
       strncpy(original, "+", MAX_MUTANT_CHANGE);
       strncpy(replacement, "-", MAX_MUTANT_CHANGE);
-    case 2:
+    case 15:
+      strncpy(original, "-", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+    case 16:
+      strncpy(original, "+", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "*", MAX_MUTANT_CHANGE);
+    case 17:
+      strncpy(original, "*", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+    case 18:
+      strncpy(original, "*", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "/", MAX_MUTANT_CHANGE);
+    case 19:
+      strncpy(original, "/", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "*", MAX_MUTANT_CHANGE);           
+    case 20:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\nbreak;\n", MAX_MUTANT_CHANGE);
-    case 3:
+    case 21:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\ncontinue;\n", MAX_MUTANT_CHANGE);
-    case 4:
+    case 22:
       strncpy(original, "0", MAX_MUTANT_CHANGE);
       strncpy(replacement, "1", MAX_MUTANT_CHANGE);
+    }
+    opos = strnstr(*out_buf + pos, original, *temp_len - pos);
+    if (opos != NULL) {
+      break;
+    }
   }
-  const char* opos = strstr(*out_buf + pos, original);
   if (opos == NULL) {
     free(original);
     free(replacement);
@@ -5016,7 +5078,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   memcpy(new_buf, *out_buf, oplen);
   memcpy(new_buf + oplen, replacement, replacement_len);
   memcpy(new_buf + oplen + replacement_len, opos + original_len,
-    *temp_len - (oplen + original_len));
+	 *temp_len - (oplen + original_len));
   ck_free(*out_buf);
   (*out_buf) = new_buf;
   (*temp_len) = mutant_size;

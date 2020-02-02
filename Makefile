@@ -73,7 +73,7 @@ afl-fuzz: afl-fuzz.c $(COMM_HDR) | test_x86
 	$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
 
 afl-fuzz-compiler: afl-fuzz.c $(COMM_HDR)| test_x86
-	$(CC) $(CFLAGS) afl-fuzz.c -o $@ $(LDFLAGS) -DAFL_USE_MUTATION_TOOL -DP_MUTATION_TOOL=4
+	$(CC) $(CFLAGS) afl-fuzz.c -o $@ $(LDFLAGS) -DAFL_USE_MUTATION_TOOL -DP_MUTATION_TOOL=16
 
 afl-showmap: afl-showmap.c $(COMM_HDR) | test_x86
 	$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
