@@ -4989,7 +4989,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   char* opos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
     size_t pos = UR((*temp_len) - 1);
-    switch (UR(23)) {
+    switch (UR(26)) {
     case 0:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\nif (0)\n", MAX_MUTANT_CHANGE);
@@ -5059,6 +5059,15 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
     case 22:
       strncpy(original, "0", MAX_MUTANT_CHANGE);
       strncpy(replacement, "1", MAX_MUTANT_CHANGE);
+    case 23:
+      strncpy(original, "1", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "0", MAX_MUTANT_CHANGE);
+    case 24:
+      strncpy(original, "if", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "while", MAX_MUTANT_CHANGE);
+    case 25:
+      strncpy(original, "while", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "if", MAX_MUTANT_CHANGE);
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
     if (opos != NULL) {
