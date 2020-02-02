@@ -4989,8 +4989,9 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   char* original = malloc(MAX_MUTANT_CHANGE + 1);
   char* replacement = malloc(MAX_MUTANT_CHANGE + 1);
   char* opos;
+  size_t pos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
-    size_t pos = UR((*temp_len) - 1);
+    pos = UR((*temp_len) - 1);
     switch (UR(26)) {
     case 0:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
@@ -5081,6 +5082,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
     free(replacement);
     return 0;
   }
+
   size_t oplen = opos - ((char*)*out_buf);
   size_t original_len = strnlen(original, MAX_MUTANT_CHANGE);
   size_t replacement_len = strnlen(replacement, MAX_MUTANT_CHANGE);
