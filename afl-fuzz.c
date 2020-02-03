@@ -5076,48 +5076,120 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
       strncpy(replacement, "-", MAX_MUTANT_CHANGE);
       break;
     case 15:
-      strncpy(original, "-", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
-      break;
-    case 16:
       strncpy(original, "+", MAX_MUTANT_CHANGE);
       strncpy(replacement, "*", MAX_MUTANT_CHANGE);
       break;
+    case 16:
+      strncpy(original, "+", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "/", MAX_MUTANT_CHANGE);
+      break;
     case 17:
-      strncpy(original, "*", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+      strncpy(original, "+", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "%", MAX_MUTANT_CHANGE);
       break;
     case 18:
       strncpy(original, "*", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "/", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "-", MAX_MUTANT_CHANGE);
       break;
     case 19:
+      strncpy(original, "*", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+      break;
+    case 20:
+      strncpy(original, "*", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "/", MAX_MUTANT_CHANGE);
+      break;
+    case 21:
+      strncpy(original, "*", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "%", MAX_MUTANT_CHANGE);
+      break;
+    case 22:
+      strncpy(original, "-", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+      break;
+    case 23:
+      strncpy(original, "-", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "*", MAX_MUTANT_CHANGE);
+      break;
+    case 24:
+      strncpy(original, "-", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "/", MAX_MUTANT_CHANGE);
+      break;
+    case 25:
+      strncpy(original, "-", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "%", MAX_MUTANT_CHANGE);
+      break;
+    case 26:
+      strncpy(original, "/", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "-", MAX_MUTANT_CHANGE);
+      break;
+    case 27:
       strncpy(original, "/", MAX_MUTANT_CHANGE);
       strncpy(replacement, "*", MAX_MUTANT_CHANGE);
       break;
-    case 20:
+    case 28:
+      strncpy(original, "/", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+      break;
+    case 29:
+      strncpy(original, "/", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "%", MAX_MUTANT_CHANGE);
+      break;
+    case 30:
+      strncpy(original, "%", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "-", MAX_MUTANT_CHANGE);
+      break;
+    case 31:
+      strncpy(original, "%", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "*", MAX_MUTANT_CHANGE);
+      break;
+    case 32:
+      strncpy(original, "%", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "/", MAX_MUTANT_CHANGE);
+      break;
+    case 33:
+      strncpy(original, "%", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+      break;      
+    case 34:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\nbreak;\n", MAX_MUTANT_CHANGE);
       break;
-    case 21:
+    case 35:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\ncontinue;\n", MAX_MUTANT_CHANGE);
       break;
-    case 22:
+    case 36:
       strncpy(original, "0", MAX_MUTANT_CHANGE);
       strncpy(replacement, "1", MAX_MUTANT_CHANGE);
       break;
-    case 23:
+    case 37:
       strncpy(original, "1", MAX_MUTANT_CHANGE);
       strncpy(replacement, "0", MAX_MUTANT_CHANGE);
       break;
-    case 24:
+    case 38:
       strncpy(original, "if", MAX_MUTANT_CHANGE);
       strncpy(replacement, "while", MAX_MUTANT_CHANGE);
       break;
-    case 25:
+    case 39:
       strncpy(original, "while", MAX_MUTANT_CHANGE);
       strncpy(replacement, "if", MAX_MUTANT_CHANGE);
+    case 40:
+      strncpy(original, "\n", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "\nif (false)\n", MAX_MUTANT_CHANGE);
+      break;
+    case 41:
+      strncpy(original, "&&", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "||", MAX_MUTANT_CHANGE);
+      break;
+    case 42:
+      strncpy(original, "||", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "&&", MAX_MUTANT_CHANGE);
+      break;
+    case 43:
+      strncpy(original, "!", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "", MAX_MUTANT_CHANGE);
+      break;  
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
     if (opos != NULL) {
