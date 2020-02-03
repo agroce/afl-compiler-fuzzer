@@ -4992,82 +4992,108 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   size_t pos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
     pos = UR((*temp_len) - 1);
-    switch (UR(26)) {
+    int choice = UR(26);
+    switch (choice) {
     case 0:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\nif (0)\n", MAX_MUTANT_CHANGE);
+      break;
     case 1:
       strncpy(original, "(", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "(!", MAX_MUTANT_CHANGE);          
+      strncpy(replacement, "(!", MAX_MUTANT_CHANGE);
+      break;
     case 2:
       strncpy(original, "==", MAX_MUTANT_CHANGE);
       strncpy(replacement, "!=", MAX_MUTANT_CHANGE);
+      break;
     case 3:
       strncpy(original, "!=", MAX_MUTANT_CHANGE);
       strncpy(replacement, "==", MAX_MUTANT_CHANGE);
+      break;
     case 4:
       strncpy(original, "==", MAX_MUTANT_CHANGE);
       strncpy(replacement, "<", MAX_MUTANT_CHANGE);
+      break;
     case 5:
       strncpy(original, "<", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "==", MAX_MUTANT_CHANGE);         
+      strncpy(replacement, "==", MAX_MUTANT_CHANGE);
+      break;
     case 6:
       strncpy(original, "==", MAX_MUTANT_CHANGE);
       strncpy(replacement, ">", MAX_MUTANT_CHANGE);
+      break;
     case 7:
       strncpy(original, ">", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "==", MAX_MUTANT_CHANGE);      
+      strncpy(replacement, "==", MAX_MUTANT_CHANGE);
+      break;
     case 8:
       strncpy(original, "=", MAX_MUTANT_CHANGE);
       strncpy(replacement, "<", MAX_MUTANT_CHANGE);
+      break;
     case 9:
       strncpy(original, "=", MAX_MUTANT_CHANGE);
-      strncpy(replacement, ">", MAX_MUTANT_CHANGE);            
+      strncpy(replacement, ">", MAX_MUTANT_CHANGE);
+      break;
     case 10:
       strncpy(original, "<", MAX_MUTANT_CHANGE);
       strncpy(replacement, ">", MAX_MUTANT_CHANGE);
+      break;
     case 11:
       strncpy(original, ">", MAX_MUTANT_CHANGE);
       strncpy(replacement, "<", MAX_MUTANT_CHANGE);
+      break;
     case 12:
       strncpy(original, "++", MAX_MUTANT_CHANGE);
       strncpy(replacement, "--", MAX_MUTANT_CHANGE);
+      break;
     case 13:
       strncpy(original, "--", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "++", MAX_MUTANT_CHANGE);      
+      strncpy(replacement, "++", MAX_MUTANT_CHANGE);
+      break;
     case 14:
       strncpy(original, "+", MAX_MUTANT_CHANGE);
       strncpy(replacement, "-", MAX_MUTANT_CHANGE);
+      break;
     case 15:
       strncpy(original, "-", MAX_MUTANT_CHANGE);
       strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+      break;
     case 16:
       strncpy(original, "+", MAX_MUTANT_CHANGE);
       strncpy(replacement, "*", MAX_MUTANT_CHANGE);
+      break;
     case 17:
       strncpy(original, "*", MAX_MUTANT_CHANGE);
       strncpy(replacement, "+", MAX_MUTANT_CHANGE);
+      break;
     case 18:
       strncpy(original, "*", MAX_MUTANT_CHANGE);
       strncpy(replacement, "/", MAX_MUTANT_CHANGE);
+      break;
     case 19:
       strncpy(original, "/", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "*", MAX_MUTANT_CHANGE);           
+      strncpy(replacement, "*", MAX_MUTANT_CHANGE);
+      break;
     case 20:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\nbreak;\n", MAX_MUTANT_CHANGE);
+      break;
     case 21:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\ncontinue;\n", MAX_MUTANT_CHANGE);
+      break;
     case 22:
       strncpy(original, "0", MAX_MUTANT_CHANGE);
       strncpy(replacement, "1", MAX_MUTANT_CHANGE);
+      break;
     case 23:
       strncpy(original, "1", MAX_MUTANT_CHANGE);
       strncpy(replacement, "0", MAX_MUTANT_CHANGE);
+      break;
     case 24:
       strncpy(original, "if", MAX_MUTANT_CHANGE);
       strncpy(replacement, "while", MAX_MUTANT_CHANGE);
+      break;
     case 25:
       strncpy(original, "while", MAX_MUTANT_CHANGE);
       strncpy(replacement, "if", MAX_MUTANT_CHANGE);
@@ -5082,7 +5108,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
     free(replacement);
     return 0;
   }
-
+  
   size_t oplen = opos - ((char*)*out_buf);
   size_t original_len = strnlen(original, MAX_MUTANT_CHANGE);
   size_t replacement_len = strnlen(replacement, MAX_MUTANT_CHANGE);
@@ -5096,7 +5122,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   (*out_buf) = new_buf;
   (*temp_len) = mutant_size;
   free(original);
-  free(replacement);  
+  free(replacement);
   return 1;
 }
 #endif
