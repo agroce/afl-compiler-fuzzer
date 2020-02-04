@@ -5017,7 +5017,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
     switch (choice) {
     case 0:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "\nif (0)\n", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "\nif (0==1)\n", MAX_MUTANT_CHANGE);
       break;
     case 1:
       strncpy(original, "(", MAX_MUTANT_CHANGE);
@@ -5176,7 +5176,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
       strncpy(replacement, "if", MAX_MUTANT_CHANGE);
     case 40:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
-      strncpy(replacement, "\nif (false)\n", MAX_MUTANT_CHANGE);
+      strncpy(replacement, "\nwhile(1==1)\n", MAX_MUTANT_CHANGE);
       break;
     case 41:
       strncpy(original, "&&", MAX_MUTANT_CHANGE);
