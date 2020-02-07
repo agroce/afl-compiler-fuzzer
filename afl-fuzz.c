@@ -5013,9 +5013,9 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   size_t pos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
     pos = UR((*temp_len) - 1);
-    int choice = UR(26);
+    int choice = UR(48);
     switch (choice) {
-    case 0:
+    case 0: /* Semantic statement deletion */
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\nif (0==1)\n", MAX_MUTANT_CHANGE);
       break;
@@ -5189,19 +5189,91 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
     case 43:
       strncpy(original, "!", MAX_MUTANT_CHANGE);
       strncpy(replacement, "", MAX_MUTANT_CHANGE);
-      break;  
+      break;
+    case 44: /* Remove a semicolon delimited statement after a semicolon */
+      {
+	char* ldelim_start = strnstr(*out_buf + pos, ";", *temp_len - pos);
+	if (ldelim_start != NULL) {
+	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
+	    char* rdelim_end = strnstr(ldelim_start + 1, ";", MAX_MUTANT_CHANGE);
+	    int original_pos = 0;
+	    if (rdelim_end != NULL) {
+	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
+		original[original_pos++] = *cpos;
+	      }
+	      original[original_pos++] = 0;
+	      strncpy(replacement, "", MAX_MUTANT_CHANGE);
+	    }
+	  }
+	}
+      }
+      break;
+    case 45: /* Remove a semicolon delimited statement after a left curly brace */
+      {
+	char* ldelim_start = strnstr(*out_buf + pos, "{", *temp_len - pos);
+	if (ldelim_start != NULL) {
+	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
+	    char* rdelim_end = strnstr(ldelim_start + 1, ";", MAX_MUTANT_CHANGE);
+	    int original_pos = 0;
+	    if (rdelim_end != NULL) {
+	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
+		original[original_pos++] = *cpos;
+	      }
+	      original[original_pos++] = 0;
+	      strncpy(replacement, "", MAX_MUTANT_CHANGE);
+	    }
+	  }
+	}
+      }
+      break;
+    case 46: /* Remove a curly brace construct */
+      {
+	char* ldelim_start = strnstr(*out_buf + pos, "{", *temp_len - pos);
+	if (ldelim_start != NULL) {
+	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
+	    char* rdelim_end = strnstr(ldelim_start + 1, "}", MAX_MUTANT_CHANGE);
+	    int original_pos = 0;
+	    if (rdelim_end != NULL) {
+	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
+		original[original_pos++] = *cpos;
+	      }
+	      original[original_pos++] = 0;
+	      strncpy(replacement, "", MAX_MUTANT_CHANGE);
+	    }
+	  }
+	}
+      }
+      break;
+    case 47: /* Replace a curly brace construct with an empty one */
+      {
+	char* ldelim_start = strnstr(*out_buf + pos, "{", *temp_len - pos);
+	if (ldelim_start != NULL) {
+	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
+	    char* rdelim_end = strnstr(ldelim_start + 1, "}", MAX_MUTANT_CHANGE);
+	    int original_pos = 0;
+	    if (rdelim_end != NULL) {
+	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
+		original[original_pos++] = *cpos;
+	      }
+	      original[original_pos++] = 0;
+	      strncpy(replacement, "{}", MAX_MUTANT_CHANGE);
+	    }
+	  }
+	}
+      }
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
     if (opos != NULL) {
       break;
     }
   }
+
   if (opos == NULL) {
     free(original);
     free(replacement);
     return 0;
   }
-  
+
   size_t oplen = opos - ((char*)*out_buf);
   size_t original_len = strnlen(original, MAX_MUTANT_CHANGE);
   size_t replacement_len = strnlen(replacement, MAX_MUTANT_CHANGE);
