@@ -5006,12 +5006,13 @@ static void delim_replace(u8 **out_buf, s32* temp_len, char **original, char**re
   if (ldelim_start != NULL) {
     if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
       char* rdelim_end = strnstr(ldelim_start + 1, rdelim, MAX_MUTANT_CHANGE);
-      int original_pos = 0;
       if (rdelim_end != NULL) {
-	for (char* cpos = ldelim_start; cpos <= rdelim_end; cpos++) {
+	int original_pos = 0;	
+	for (char* cpos = ldelim_start; (cpos <= rdelim_end) && (original_pos < MAX_MUTANT_CHANGE);
+	     cpos++) {
 	  (*original)[original_pos++] = *cpos;
 	}
-	(*original)[original_pos++] = 0;
+	(*original)[original_pos] = 0;
 	strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
       }
     }
@@ -5019,18 +5020,34 @@ static void delim_replace(u8 **out_buf, s32* temp_len, char **original, char**re
 }
 
 static void delim_swap(u8 **out_buf, s32* temp_len, char **original, char**replacement,
-			 size_t pos, const char* ldelim, const char* rdelim, const char* rep) {
+		       size_t pos, const char* ldelim, const char* mdelim, const char* rdelim) {
   char* ldelim_start = strnstr(*out_buf + pos, ldelim, *temp_len - pos);
   if (ldelim_start != NULL) {
     if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
-      char* rdelim_end = strnstr(ldelim_start + 1, rdelim, MAX_MUTANT_CHANGE);
-      int original_pos = 0;
-      if (rdelim_end != NULL) {
-	for (char* cpos = ldelim_start; cpos <= rdelim_end; cpos++) {
-	  (*original)[original_pos++] = *cpos;
+      char* mdelim_end = strnstr(ldelim_start + 1, mdelim, MAX_MUTANT_CHANGE);
+      if (mdelim_end != NULL) {
+	char* rdelim_end = strnstr(mdelim_end+ 1, rdelim,
+				   MAX_MUTANT_CHANGE - (mdelim_end - ldelim_start));
+	if (rdelim_end != NULL) {
+	  int original_pos = 0;
+	  for (char* cpos = ldelim_start + 1; (cpos <= rdelim_end) && (original_pos < MAX_MUTANT_CHANGE);
+	       cpos++) {
+	    (*original)[original_pos++] = *cpos;
+	  }
+	  (*original)[original_pos] = 0;
+	  int replacement_pos = 0;
+	  for (char* cpos = mdelim_end + 1; (cpos < rdelim_end) && (replacement_pos < MAX_MUTANT_CHANGE);
+	       cpos++) {
+	    (*replacement)[replacement_pos++] = *cpos;
+	  }
+	  (*replacement)[replacement_pos++] = mdelim[0];
+	  for (char* cpos = ldelim_start + 1; (cpos < mdelim_end) && (replacement_pos < MAX_MUTANT_CHANGE);
+	       cpos++) {
+	    (*replacement)[replacement_pos++] = *cpos;
+	  }
+	  (*replacement)[replacement_pos++] = rdelim[0];
+	  (*replacement)[replacement_pos] = 0;
 	}
-	(*original)[original_pos++] = 0;
-	strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
       }
     }
   }
@@ -5052,7 +5069,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   size_t pos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
     pos = UR((*temp_len) - 1);
-    int choice = UR(48);
+    int choice = UR(53);
     switch (choice) {
     case 0: /* Semantic statement deletion */
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
@@ -5240,6 +5257,21 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
       break;
     case 47: /* Replace a curly brace construct with an empty one */
       delim_replace(out_buf, temp_len, &original, &replacement, pos, "{", "}", "{}");
+      break;
+    case 48:
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, ";", ";", ";");
+      break;
+    case 49:
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, "}", ";", ";");
+      break;
+    case 50:
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ")");
+      break;
+    case 51:
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ",");
+      break;
+    case 52:
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ",");
       break;
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
