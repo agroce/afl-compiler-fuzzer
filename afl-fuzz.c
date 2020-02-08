@@ -5000,15 +5000,54 @@ strnstr(const char *s, const char *find, size_t slen)
 #define MAX_MUTANT_CHANGE 1024
 #define MAX_MUTANT_TRIES 16
 
+static void delim_replace(u8 **out_buf, s32* temp_len, char **original, char**replacement,
+			 size_t pos, const char* ldelim, const char* rdelim, const char* rep) {
+  char* ldelim_start = strnstr(*out_buf + pos, ldelim, *temp_len - pos);
+  if (ldelim_start != NULL) {
+    if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
+      char* rdelim_end = strnstr(ldelim_start + 1, rdelim, MAX_MUTANT_CHANGE);
+      int original_pos = 0;
+      if (rdelim_end != NULL) {
+	for (char* cpos = ldelim_start; cpos <= rdelim_end; cpos++) {
+	  (*original)[original_pos++] = *cpos;
+	}
+	(*original)[original_pos++] = 0;
+	strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
+      }
+    }
+  }
+}
+
+static void delim_swap(u8 **out_buf, s32* temp_len, char **original, char**replacement,
+			 size_t pos, const char* ldelim, const char* rdelim, const char* rep) {
+  char* ldelim_start = strnstr(*out_buf + pos, ldelim, *temp_len - pos);
+  if (ldelim_start != NULL) {
+    if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
+      char* rdelim_end = strnstr(ldelim_start + 1, rdelim, MAX_MUTANT_CHANGE);
+      int original_pos = 0;
+      if (rdelim_end != NULL) {
+	for (char* cpos = ldelim_start; cpos <= rdelim_end; cpos++) {
+	  (*original)[original_pos++] = *cpos;
+	}
+	(*original)[original_pos++] = 0;
+	strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
+      }
+    }
+  }
+}
+
 static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   /* Returns 1 if a mutant was generated and placed in out_buf, 0 if none generated. */
 
   if (*temp_len < 2) {
     return 0;
   }
-  
+
   char* original = malloc(MAX_MUTANT_CHANGE + 1);
   char* replacement = malloc(MAX_MUTANT_CHANGE + 1);
+  strncpy(original, "INVALID", MAX_MUTANT_CHANGE);
+  strncpy(replacement, "INVALID", MAX_MUTANT_CHANGE);
+  /* Above defaults are to handle when sdels fail */
   char* opos;
   size_t pos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
@@ -5191,76 +5230,17 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
       strncpy(replacement, "", MAX_MUTANT_CHANGE);
       break;
     case 44: /* Remove a semicolon delimited statement after a semicolon */
-      {
-	char* ldelim_start = strnstr(*out_buf + pos, ";", *temp_len - pos);
-	if (ldelim_start != NULL) {
-	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
-	    char* rdelim_end = strnstr(ldelim_start + 1, ";", MAX_MUTANT_CHANGE);
-	    int original_pos = 0;
-	    if (rdelim_end != NULL) {
-	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
-		original[original_pos++] = *cpos;
-	      }
-	      original[original_pos++] = 0;
-	      strncpy(replacement, "", MAX_MUTANT_CHANGE);
-	    }
-	  }
-	}
-      }
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, ";", ";", ";");
       break;
     case 45: /* Remove a semicolon delimited statement after a left curly brace */
-      {
-	char* ldelim_start = strnstr(*out_buf + pos, "{", *temp_len - pos);
-	if (ldelim_start != NULL) {
-	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
-	    char* rdelim_end = strnstr(ldelim_start + 1, ";", MAX_MUTANT_CHANGE);
-	    int original_pos = 0;
-	    if (rdelim_end != NULL) {
-	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
-		original[original_pos++] = *cpos;
-	      }
-	      original[original_pos++] = 0;
-	      strncpy(replacement, "", MAX_MUTANT_CHANGE);
-	    }
-	  }
-	}
-      }
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "}", ";", "}");
       break;
     case 46: /* Remove a curly brace construct */
-      {
-	char* ldelim_start = strnstr(*out_buf + pos, "{", *temp_len - pos);
-	if (ldelim_start != NULL) {
-	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
-	    char* rdelim_end = strnstr(ldelim_start + 1, "}", MAX_MUTANT_CHANGE);
-	    int original_pos = 0;
-	    if (rdelim_end != NULL) {
-	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
-		original[original_pos++] = *cpos;
-	      }
-	      original[original_pos++] = 0;
-	      strncpy(replacement, "", MAX_MUTANT_CHANGE);
-	    }
-	  }
-	}
-      }
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "{", "}", "");
       break;
     case 47: /* Replace a curly brace construct with an empty one */
-      {
-	char* ldelim_start = strnstr(*out_buf + pos, "{", *temp_len - pos);
-	if (ldelim_start != NULL) {
-	  if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
-	    char* rdelim_end = strnstr(ldelim_start + 1, "}", MAX_MUTANT_CHANGE);
-	    int original_pos = 0;
-	    if (rdelim_end != NULL) {
-	      for (char* cpos = ldelim_start; cpos < rdelim_end; cpos++) {
-		original[original_pos++] = *cpos;
-	      }
-	      original[original_pos++] = 0;
-	      strncpy(replacement, "{}", MAX_MUTANT_CHANGE);
-	    }
-	  }
-	}
-      }
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "{", "}", "{}");
+      break;
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
     if (opos != NULL) {
@@ -5278,6 +5258,13 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   size_t original_len = strnlen(original, MAX_MUTANT_CHANGE);
   size_t replacement_len = strnlen(replacement, MAX_MUTANT_CHANGE);
   size_t mutant_size = *temp_len + (replacement_len - original_len);
+
+  if (mutant_size == 0) {
+    free(original);
+    free(replacement);
+    return 0;
+  }
+
   u8* new_buf = ck_alloc_nozero(mutant_size);
   memcpy(new_buf, *out_buf, oplen);
   memcpy(new_buf + oplen, replacement, replacement_len);
@@ -5288,6 +5275,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   (*temp_len) = mutant_size;
   free(original);
   free(replacement);
+
   return 1;
 }
 #endif
