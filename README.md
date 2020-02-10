@@ -1,3 +1,13 @@
+# 0) Fuzzing compilers
+
+This is basically afl, run as usual, except that the `afl-fuzz-compiler` executable should (considerably) improve effectveness when fuzzing any target that takes C-like (in terms of syntax, e.g., Java, Solidity, Rust, C#, Javascript, Scala) language files as input.  It has already been used to find several previously unknown bugs in the Solidity smart contract compiler.  While the approach is currently tuned to C-like code, they will probably be *somewhat* useful for fuzzing other languages that share typical arithmetic operators, or use `,` to separate function arguments.
+
+`afl-fuzz-compiler-pure` is similar, except even more aggressive about using the language-focused fuzzing, possibly too much so (not yet tested).
+
+This project is joint work with Claire Le Goues, John Regehr, and Rijnard van Tonder.  The basic idea is that rather than forcing projects to build custom mutation code and/or big dictionaries for compiler fuzzing, we use mutation operators (as in mutation testing) as new afl havoc mutators, which tends to preserve validity of corpus/queue files better, and hits more interesting behavior quickly.
+
+Text below is the standard afl README.
+
 # american fuzzy lop
 
 [![Build Status](https://travis-ci.org/google/AFL.svg?branch=master)](https://travis-ci.org/google/AFL)
