@@ -1,6 +1,6 @@
 # 0) Fuzzing compilers
 
-This is basically afl, run as usual, except that the `afl-fuzz-compiler` executable should (considerably) improve effectveness when fuzzing any target that takes C-like (in terms of syntax, e.g., Java, Solidity, Rust, C#, Swift, Javascript, Scala, etc. etc.) language files as input.  It has already been used to find several previously unknown bugs in the Solidity smart contract compiler.  While the approach is currently tuned to C-like code, they will probably be *somewhat* useful for fuzzing other languages that share typical arithmetic operators, or use `,` to separate function arguments.
+This is basically afl, run as usual, except that the `afl-fuzz-compiler` executable should (considerably) improve effectveness when fuzzing any target that takes C-like (in terms of syntax, e.g., Java, Solidity, Rust, C#, Swift, Javascript, Scala, etc. etc.) language files as input.  It has already been used to find several previously unknown bugs in the Solidity smart contract compiler.  While the approach is currently tuned to C-like code, it will probably be *somewhat* useful for fuzzing other languages that share typical arithmetic/logical/comparison operators, or use `,` to separate function arguments.
 
 `afl-fuzz-compiler-pure` is similar, except even more aggressive about using the language-focused fuzzing, possibly too much so (not yet tested).
 
