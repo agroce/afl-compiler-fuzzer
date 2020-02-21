@@ -5069,7 +5069,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   size_t pos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
     pos = UR((*temp_len) - 1);
-    int choice = UR(53);
+    int choice = UR(61);
     switch (choice) {
     case 0: /* Semantic statement deletion */
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
@@ -5272,6 +5272,30 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
       break;
     case 52:
       delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ",");
+      break;
+    case 53: /* Just delete a line */
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "\n", "");
+      break;
+    case 54: /* Delete something like "const" case 1 */
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, " ", " ", "");
+      break;
+    case 55: /* Delete something like "const" case 2 */
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", " ", "");
+      break;
+    case 56: /* Delete something like "const" case 3 */
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "(", " ", "");
+      break;
+    case 57: /* Swap space delimited things case 1 */
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", " ");
+      break;
+    case 58: /* Swap space delimited things case 1 */
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", ")");
+      break;
+    case 59: /* Swap space delimited things case 1 */
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", " ");
+      break;
+    case 60: /* Swap space delimited things case 1 */
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", ")");
       break;
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
