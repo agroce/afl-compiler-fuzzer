@@ -5002,6 +5002,7 @@ strnstr(const char *s, const char *find, size_t slen)
 
 static void delim_replace(u8 **out_buf, s32* temp_len, char **original, char**replacement,
 			 size_t pos, const char* ldelim, const char* rdelim, const char* rep) {
+  /* if rep == NULL,  then we will duplicate the target */
   char* ldelim_start = strnstr(*out_buf + pos, ldelim, *temp_len - pos);
   if (ldelim_start != NULL) {
     if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
@@ -5013,7 +5014,11 @@ static void delim_replace(u8 **out_buf, s32* temp_len, char **original, char**re
 	  (*original)[original_pos++] = *cpos;
 	}
 	(*original)[original_pos] = 0;
-	strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
+	if (rep != NULL) {
+	  strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
+	} else {
+	  strncpy(*replacement, *original, MAX_MUTANT_CHANGE);
+	}
       }
     }
   }
@@ -5069,7 +5074,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   size_t pos;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
     pos = UR((*temp_len) - 1);
-    int choice = UR(61);
+    int choice = UR(64);
     switch (choice) {
     case 0: /* Semantic statement deletion */
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
@@ -5264,39 +5269,48 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
     case 49:
       delim_swap(out_buf, temp_len, &original, &replacement, pos, "}", ";", ";");
       break;
-    case 50:
+    case 50: /* Swap comma delimited things case 1 */
       delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ")");
       break;
-    case 51:
+    case 51: /* Swap comma delimited things case 2 */
       delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ",");
       break;
-    case 52:
+    case 52: /* Swap comma delimited things case 3 */
       delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ",");
       break;
-    case 53: /* Just delete a line */
+    case 53: /* Swap comma delimited things case 4 */
+      delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ")");
+      break;
+    case 54: /* Just delete a line */
       delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "\n", "");
       break;
-    case 54: /* Delete something like "const" case 1 */
+    case 55: /* Delete something like "const" case 1 */
       delim_replace(out_buf, temp_len, &original, &replacement, pos, " ", " ", "");
       break;
-    case 55: /* Delete something like "const" case 2 */
+    case 56: /* Delete something like "const" case 2 */
       delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", " ", "");
       break;
-    case 56: /* Delete something like "const" case 3 */
+    case 57: /* Delete something like "const" case 3 */
       delim_replace(out_buf, temp_len, &original, &replacement, pos, "(", " ", "");
       break;
-    case 57: /* Swap space delimited things case 1 */
+    case 58: /* Swap space delimited things case 1 */
       delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", " ");
       break;
-    case 58: /* Swap space delimited things case 1 */
+    case 59: /* Swap space delimited things case 2 */
       delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", ")");
       break;
-    case 59: /* Swap space delimited things case 1 */
+    case 60: /* Swap space delimited things case 3 */
       delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", " ");
       break;
-    case 60: /* Swap space delimited things case 1 */
+    case 61: /* Swap space delimited things case 4 */
       delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", ")");
       break;
+    case 62: /* Duplicate a single line of code */
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "\n", NULL);
+      break;
+    case 63: /* Duplicate a construct (most often, a non-nested for loop */
+      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "}", NULL);
+      break;            
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
     if (opos != NULL) {
