@@ -4974,7 +4974,9 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 
 #ifdef AFL_USE_MUTATION_TOOL
 
-#include <string.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 char *
 strnstr(const char *s, const char *find, size_t slen)
@@ -5346,6 +5348,168 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   free(original);
   free(replacement);
 
+  return 1;
+}
+
+void error(const char *msg) { perror(msg); exit(0); }
+
+#define RESPONSE_OFFSET 8
+#define DEBUG_POST 0
+
+int post(char *host, int portno, u8 **out_buf, s32 *temp_len) {
+
+  // Reject short uninteresting strings.
+  if (*temp_len < 5) {
+    return 0;
+  }
+
+  // Uncomment and use harcoded_src for debugging.
+  // char *hardcoded_src = "contract C { uint immutable x = 0; }";
+  char *hardcoded_src = *out_buf;
+
+  // Reject non-ascii.
+  for (int i = 0; i < *temp_len; i++) {
+    if (!isascii((*out_buf)[i])) {
+      return 0;
+    }
+  }
+
+  char *body = malloc(8192);
+  snprintf(body, *temp_len, "%s", hardcoded_src);
+  if (DEBUG_POST) {
+    printf("------------------------------\n");
+    printf("len: %d\n", *temp_len);
+    printf("content: %s\n", body);
+  }
+
+  portno = portno > 0 ? portno : 80;
+  host = strlen(host) > 0 ? host : "localhost";
+
+  struct hostent *server;
+  struct sockaddr_in serv_addr;
+  int sockfd, bytes, sent, received, total, message_size;
+  char *message;
+
+  int response_sz = 8192;
+  char *response = malloc(response_sz);
+
+  /* How big is the message? */
+  message_size=0;
+  message_size+=strlen("%s %s HTTP/1.0\r\n");
+  message_size+=strlen("POST");                                 /* method         */
+  message_size+=strlen("/mutate");                              /* path           */
+  message_size+=strlen("Content-Type: text/plain\r\n");         /* content-type   */
+  message_size+=strlen("Content-Length: %lu\r\n")+10;           /* content length */
+  message_size+=strlen("\r\n");                                 /* blank line     */
+  message_size+=strlen(body);                                   /* body           */
+
+  /* allocate space for the message */
+  message=malloc(message_size);
+
+  /* fill in the parameters */
+  sprintf(message,"%s %s HTTP/1.0\r\n", "POST", "/mutate");
+  strcat(message, "Content-Type: text/plain\r\n");
+  sprintf(message+strlen(message), "Content-Length: %lu\r\n", strlen(body));
+  strcat(message,"\r\n");
+  strcat(message, body);
+
+  /* What are we going to send? */
+  if (DEBUG_POST) {
+    printf("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n");
+    printf("Send: ->\n%s<-\n",message);
+    printf("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n");
+  }
+
+  /* create the socket */
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) error("ERROR opening socket");
+
+  /* lookup the ip address */
+  server = gethostbyname(host);
+  if (server == NULL) error("ERROR, no such host");
+
+  /* fill in the structure */
+  memset(&serv_addr,0,sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(portno);
+  memcpy(&serv_addr.sin_addr.s_addr,server->h_addr,server->h_length);
+
+  /* connect the socket */
+  if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
+    error("ERROR connecting");
+
+  /* send the request */
+  total = strlen(message);
+  sent = 0;
+  do {
+    bytes = write(sockfd,message+sent,total-sent);
+    if (bytes < 0)
+      error("ERROR writing message to socket");
+    if (bytes == 0)
+      break;
+    sent+=bytes;
+  } while (sent < total);
+
+  /* receive the response */
+  memset(response,0,response_sz);
+  total = response_sz-1;
+  received = 0;
+  do {
+    bytes = read(sockfd,response+received,total-received);
+    if (bytes < 0)
+      error("ERROR reading response from socket");
+    if (bytes == 0)
+      break;
+    received+=bytes;
+  } while (received < total);
+
+  if (received == total){
+    // printf("Response:\n%s\n",response);
+    error("ERROR storing complete response from socket");
+  }
+  response[received] = '\0';
+
+  /* close the socket */
+  close(sockfd);
+
+  free(body);
+  free(message);
+
+  /* process response */
+  char* advance;
+  advance = response;
+  int line = 0;
+  while (line != RESPONSE_OFFSET) {
+    if (*advance == '\0') {
+      break;
+    }
+    if (*advance == '\n') {
+      line++;
+    }
+    advance++;
+  }
+
+  if (line != RESPONSE_OFFSET) {
+    free(response);
+    return 0;
+  }
+
+  if (strlen(advance) == 0) {
+    free(response);
+    return 0;
+  }
+  if (DEBUG_POST) {
+    printf("Recv: ->%s<-\n", advance);
+    printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+  }
+
+  u8* new_buf = ck_alloc(strlen(advance)+1);
+  memcpy(new_buf, advance, strlen(advance));
+  ck_free(*out_buf);
+  (*out_buf) = new_buf;
+  (*temp_len) = strlen(advance);
+
+  free(response);
   return 1;
 }
 #endif
@@ -6513,7 +6677,9 @@ havoc_stage:
 #ifdef AFL_USE_MUTATION_TOOL
       int mutated = 0;
       if (UR(64) < P_MUTATION_TOOL) {
-        mutated = use_mutation_tool(&out_buf, &temp_len);
+        // mutated = use_mutation_tool(&out_buf, &temp_len);
+        /* Hit the mutation server. */
+        mutated = post("localhost", 4448, &out_buf, &temp_len);
       }
 
       if (!mutated)
