@@ -107,6 +107,10 @@ static u32 hang_tmout = EXEC_TIMEOUT; /* Timeout used for hang det (ms)   */
 
 EXP_ST u64 mem_limit  = MEM_LIMIT;    /* Memory cap for child (MB)        */
 
+EXP_ST u32 p_c_string_mutation = 0;   /* Probability to use builtin C fn  */
+EXP_ST u32 p_comby_server = 0;        /* Probability to call server       */
+EXP_ST u32 comby_server_port = 4448;  /* Probability to call server       */
+
 static u32 stats_update_freq = 1;     /* Stats update frequency (execs)   */
 
 EXP_ST u8  skip_deterministic,        /* Skip deterministic stages?       */
@@ -5355,6 +5359,7 @@ void error(const char *msg) { perror(msg); exit(0); }
 
 #define RESPONSE_OFFSET 8
 #define DEBUG_POST 0
+#define MAX_RESPONSE_SIZE 819200
 
 int post(char *host, int portno, u8 **out_buf, s32 *temp_len) {
 
@@ -5374,7 +5379,7 @@ int post(char *host, int portno, u8 **out_buf, s32 *temp_len) {
     }
   }
 
-  char *body = malloc(8192);
+  char *body = malloc(*temp_len+1);
   snprintf(body, *temp_len, "%s", hardcoded_src);
   if (DEBUG_POST) {
     printf("------------------------------\n");
@@ -5390,8 +5395,8 @@ int post(char *host, int portno, u8 **out_buf, s32 *temp_len) {
   int sockfd, bytes, sent, received, total, message_size;
   char *message;
 
-  int response_sz = 8192;
-  char *response = malloc(response_sz);
+  int response_sz = MAX_RESPONSE_SIZE;
+  char *response = malloc(response_sz); // sloppy: improve by using a Content-Length header from server instead.
 
   /* How big is the message? */
   message_size=0;
@@ -5464,8 +5469,12 @@ int post(char *host, int portno, u8 **out_buf, s32 *temp_len) {
   } while (received < total);
 
   if (received == total){
-    // printf("Response:\n%s\n",response);
     error("ERROR storing complete response from socket");
+    close(sockfd);
+    free(body);
+    free(message);
+    free(response);
+    return 0; // May make sense to fail hard instead.
   }
   response[received] = '\0';
 
@@ -6676,15 +6685,21 @@ havoc_stage:
 
 #ifdef AFL_USE_MUTATION_TOOL
       int mutated = 0;
-      if (UR(64) < P_MUTATION_TOOL) {
-        // mutated = use_mutation_tool(&out_buf, &temp_len);
-        /* Hit the mutation server. */
-        mutated = post("localhost", 4448, &out_buf, &temp_len);
+      u32 pick = UR(100) + 1;
+
+      if (pick <= p_c_string_mutation) {
+
+        mutated = use_mutation_tool(&out_buf, &temp_len);
+
+      } else if (pick <= p_c_string_mutation + p_comby_server) {
+
+        mutated = post("localhost", comby_server_port, &out_buf, &temp_len);
+
       }
 
       if (!mutated)
 #endif
-      
+
       switch (UR(15 + ((extras_cnt + a_extras_cnt) ? 2 : 0))) {
 
         case 0:
@@ -7655,6 +7670,12 @@ static void usage(u8* argv0) {
        "  -n            - fuzz without instrumentation (dumb mode)\n"
        "  -x dir        - optional fuzzer dictionary (see README)\n\n"
 
+       "Compiler fuzzing settings:\n\n"
+
+       "  -1 [0-100]    - probability to apply built-in compiler mutation (C string implementions)\n"
+       "  -2 [0-100]    - probability to apply mutation using external server (comby)\n"
+       "  -p port       - external mutation server port (default 4448)\n\n"
+
        "Other stuff:\n\n"
 
        "  -T text       - text banner to show on the screen\n"
@@ -8316,7 +8337,7 @@ int main(int argc, char** argv) {
   gettimeofday(&tv, &tz);
   srandom(tv.tv_sec ^ tv.tv_usec ^ getpid());
 
-  while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:Q")) > 0)
+  while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:Q1:2:p:")) > 0)
 
     switch (opt) {
 
@@ -8375,6 +8396,22 @@ int main(int argc, char** argv) {
         if (extras_dir) FATAL("Multiple -x options not supported");
         extras_dir = optarg;
         break;
+
+      case '1':
+
+	if (p_c_string_mutation) FATAL("Multiple -1 options not supported");
+        sscanf(optarg, "%u", &p_c_string_mutation);
+	break;
+
+      case '2':
+
+	if (p_comby_server) FATAL("Multiple -2 options not supported");
+        sscanf(optarg, "%u", &p_comby_server);
+	break;
+
+      case 'p':
+        sscanf(optarg, "%u", &comby_server_port);
+	break;
 
       case 't': { /* timeout */
 
