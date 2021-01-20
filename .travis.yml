@@ -8,8 +8,7 @@ env:
 
 before_install:
   - sudo apt update
-  - sudo apt install -y libtool libtool-bin automake bison libglib2.0 python3 python3-pip python3-setuptools
-  - pip3 install universalmutator
+  - sudo apt install -y libtool libtool-bin automake bison libglib2.0
 
 # TODO: Look into splitting off some builds using a build matrix.
 # TODO: Move this all into a bash script so we don't need to write bash in yaml.
