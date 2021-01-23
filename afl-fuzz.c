@@ -107,9 +107,11 @@ static u32 hang_tmout = EXEC_TIMEOUT; /* Timeout used for hang det (ms)   */
 
 EXP_ST u64 mem_limit  = MEM_LIMIT;    /* Memory cap for child (MB)        */
 
-EXP_ST u32 p_c_string_mutation = 0;   /* Probability to use builtin C fn  */
+#ifdef AFL_USE_MUTATION_TOOL
+EXP_ST u32 p_c_string_mutation = 75;  /* Probability to use builtin C fn  */
 EXP_ST u32 p_comby_server = 0;        /* Probability to call server       */
 EXP_ST u32 comby_server_port = 4448;  /* Probability to call server       */
+#endif
 
 static u32 stats_update_freq = 1;     /* Stats update frequency (execs)   */
 
@@ -7670,11 +7672,13 @@ static void usage(u8* argv0) {
        "  -n            - fuzz without instrumentation (dumb mode)\n"
        "  -x dir        - optional fuzzer dictionary (see README)\n\n"
 
+#ifdef AFL_USE_MUTATION_TOOL
        "Compiler fuzzing settings:\n\n"
 
-       "  -1 [0-100]    - probability to apply built-in compiler mutation (C string implementions)\n"
-       "  -2 [0-100]    - probability to apply mutation using external server (comby)\n"
+       "  -1 [0-100]    - probability to apply built-in compiler mutation (C string implementions) (default: 75%)\n"
+       "  -2 [0-100]    - probability to apply mutation using external server (comby) (default 0%)\n"
        "  -p port       - external mutation server port (default 4448)\n\n"
+#endif
 
        "Other stuff:\n\n"
 
@@ -8337,6 +8341,18 @@ int main(int argc, char** argv) {
   gettimeofday(&tv, &tz);
   srandom(tv.tv_sec ^ tv.tv_usec ^ getpid());
 
+#ifdef AFL_USE_MUTATION_TOOL
+  if (getenv("AFL_P_C_STRING_MUTATION") != 0) {
+    p_c_string_mutation = atoi(getenv("AFL_P_C_STRING_MUTATION"));
+  }
+  if (getenv("AFL_P_COMBY_SERVER") != 0) {
+    p_comby_server = atoi(getenv("AFL_P_COMBY_SERVER"));
+  }
+  if (getenv("AFL_COMBY_SERVER_PORT") != 0) {
+    comby_server_port = atoi(getenv("AFL_COMBY_SERVER_PORT"));
+  }
+#endif
+
   while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:Q1:2:p:")) > 0)
 
     switch (opt) {
@@ -8397,6 +8413,7 @@ int main(int argc, char** argv) {
         extras_dir = optarg;
         break;
 
+#ifdef AFL_USE_MUTATION_TOOL
       case '1':
 
 	if (p_c_string_mutation) FATAL("Multiple -1 options not supported");
@@ -8412,6 +8429,7 @@ int main(int argc, char** argv) {
       case 'p':
         sscanf(optarg, "%u", &comby_server_port);
 	break;
+#endif
 
       case 't': { /* timeout */
 
