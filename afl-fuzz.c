@@ -8416,13 +8416,13 @@ int main(int argc, char** argv) {
 #ifdef AFL_USE_MUTATION_TOOL
       case '1':
 
-	if (p_c_string_mutation) FATAL("Multiple -1 options not supported");
+	//if (p_c_string_mutation) FATAL("Multiple -1 options not supported");
         sscanf(optarg, "%u", &p_c_string_mutation);
 	break;
 
       case '2':
 
-	if (p_comby_server) FATAL("Multiple -2 options not supported");
+	//if (p_comby_server) FATAL("Multiple -2 options not supported");
         sscanf(optarg, "%u", &p_comby_server);
 	break;
 
