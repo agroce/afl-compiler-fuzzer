@@ -7675,8 +7675,8 @@ static void usage(u8* argv0) {
 #ifdef AFL_USE_MUTATION_TOOL
        "Compiler fuzzing settings:\n\n"
 
-       "  -1 [0-100]    - probability to apply built-in compiler mutation (C string implementions) (default: 75%)\n"
-       "  -2 [0-100]    - probability to apply mutation using external server (comby) (default 0%)\n"
+       "  -1 [0-100]    - probability to apply built-in compiler mutation (C string implementions) (default: 75%%)\n"
+       "  -2 [0-100]    - probability to apply mutation using external server (comby) (default 0%%)\n"
        "  -p port       - external mutation server port (default 4448)\n\n"
 #endif
 
