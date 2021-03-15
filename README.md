@@ -12,7 +12,7 @@ This project is joint work with Claire Le Goues, John Regehr, and Rijnard van To
 
 `afl-fuzz-compiler` with the same options as `afl-fuzz` will use a fast, but dumb, built-in set of string-based mutations.  Our experiments thus far are mostly based on these.  If you install comby, an experimental mutation server that is slower but smarter can also be used.  By default `afl-fuzz-compiler` uses code mutation 75% of the time.  You can change this with the `-1` option.  The probability to use comby (default 0%) can be set using `-2`.  The rest of the time, normal AFL mutation will be used.  Note this all only happens in havoc mutations.
 
-If you need to build `afl-fuzz` to include our mutations, set `CFLAGS=DAFL_USE_MUTATION_TOOL` before compiling AFL.  You can control the options to `afl-fuzz` (or `afl-fuzz-compiler`) using environment variables, as well.  `AFL_P_C_STRING_MUTATION`, `AFL_P_COMBY_SERVER`, and `AFL_COMBY_SERVER_PORT` respectively, set the `-1`, `-2`, and `-p` options in case you are using some existing setup that does not easily let you control afl flags.
+If you need to build `afl-fuzz` to include our mutations, edit the Makefile to set -DAFL_USE_MUTATION_TOOL for building afl-fuzz, before compiling AFL.  You can control the options to `afl-fuzz` (or `afl-fuzz-compiler`) using environment variables, as well.  `AFL_P_C_STRING_MUTATION`, `AFL_P_COMBY_SERVER`, and `AFL_COMBY_SERVER_PORT` respectively, set the `-1`, `-2`, and `-p` options in case you are using some existing setup that does not easily let you control afl flags.
 
 Text below is the standard afl README.
 
