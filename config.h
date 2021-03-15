@@ -28,7 +28,11 @@
 
 /* Version string: */
 
+#ifndef AFL_USE_MUTATION_TOOL
 #define VERSION             "2.56b"
+#else
+#define VERSION             "2.56b [compiler-fuzzer]"
+#endif
 
 /******************************************************
  *                                                    *
