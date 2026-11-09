@@ -5008,62 +5008,71 @@ strnstr(const char *s, const char *find, size_t slen)
 #define MAX_MUTANT_CHANGE 1024
 #define MAX_MUTANT_TRIES 16
 
-static void delim_replace(u8 **out_buf, s32* temp_len, char **original, char**replacement,
+/* Search length from p to the end of out_buf, capped at MAX_MUTANT_CHANGE. */
+static size_t search_len(u8 *out_buf, s32 temp_len, char *p, size_t cap) {
+  size_t left = (size_t)((char*)out_buf + temp_len - p);
+  return left < cap ? left : cap;
+}
+
+/* Returns 1 if original/replacement were set, 0 if the delimiters were not found. */
+static int delim_replace(u8 **out_buf, s32* temp_len, char **original, char**replacement,
 			 size_t pos, const char* ldelim, const char* rdelim, const char* rep) {
   /* if rep == NULL,  then we will duplicate the target */
   char* ldelim_start = strnstr(*out_buf + pos, ldelim, *temp_len - pos);
-  if (ldelim_start != NULL) {
-    if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
-      char* rdelim_end = strnstr(ldelim_start + 1, rdelim, MAX_MUTANT_CHANGE);
-      if (rdelim_end != NULL) {
-	int original_pos = 0;	
-	for (char* cpos = ldelim_start; (cpos <= rdelim_end) && (original_pos < MAX_MUTANT_CHANGE);
-	     cpos++) {
-	  (*original)[original_pos++] = *cpos;
-	}
-	(*original)[original_pos] = 0;
-	if (rep != NULL) {
-	  strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
-	} else {
-	  strncpy(*replacement, *original, MAX_MUTANT_CHANGE);
-	}
-      }
-    }
+  if (ldelim_start == NULL) return 0;
+  if ((ldelim_start - (char*)*out_buf) >= (*temp_len - 2)) return 0;
+  char* rdelim_end = strnstr(ldelim_start + 1, rdelim,
+                             search_len(*out_buf, *temp_len, ldelim_start + 1, MAX_MUTANT_CHANGE - 1));
+  if (rdelim_end == NULL) return 0;
+  int original_pos = 0;
+  for (char* cpos = ldelim_start; (cpos <= rdelim_end) && (original_pos < MAX_MUTANT_CHANGE);
+       cpos++) {
+    (*original)[original_pos++] = *cpos;
   }
+  (*original)[original_pos] = 0;
+  if (rep != NULL) {
+    strncpy(*replacement, rep, MAX_MUTANT_CHANGE);
+  } else {
+    /* duplicate: replacement is two copies of the original */
+    memcpy(*replacement, *original, original_pos);
+    memcpy(*replacement + original_pos, *original, original_pos);
+    (*replacement)[2 * original_pos] = 0;
+  }
+  return 1;
 }
 
-static void delim_swap(u8 **out_buf, s32* temp_len, char **original, char**replacement,
-		       size_t pos, const char* ldelim, const char* mdelim, const char* rdelim) {
+/* Returns 1 if original/replacement were set, 0 if the delimiters were not found. */
+static int delim_swap(u8 **out_buf, s32* temp_len, char **original, char**replacement,
+		      size_t pos, const char* ldelim, const char* mdelim, const char* rdelim) {
   char* ldelim_start = strnstr(*out_buf + pos, ldelim, *temp_len - pos);
-  if (ldelim_start != NULL) {
-    if ((ldelim_start - (char*)*out_buf) < (*temp_len - 2)) {
-      char* mdelim_end = strnstr(ldelim_start + 1, mdelim, MAX_MUTANT_CHANGE);
-      if (mdelim_end != NULL) {
-	char* rdelim_end = strnstr(mdelim_end+ 1, rdelim,
-				   MAX_MUTANT_CHANGE - (mdelim_end - ldelim_start));
-	if (rdelim_end != NULL) {
-	  int original_pos = 0;
-	  for (char* cpos = ldelim_start + 1; (cpos <= rdelim_end) && (original_pos < MAX_MUTANT_CHANGE);
-	       cpos++) {
-	    (*original)[original_pos++] = *cpos;
-	  }
-	  (*original)[original_pos] = 0;
-	  int replacement_pos = 0;
-	  for (char* cpos = mdelim_end + 1; (cpos < rdelim_end) && (replacement_pos < MAX_MUTANT_CHANGE);
-	       cpos++) {
-	    (*replacement)[replacement_pos++] = *cpos;
-	  }
-	  (*replacement)[replacement_pos++] = mdelim[0];
-	  for (char* cpos = ldelim_start + 1; (cpos < mdelim_end) && (replacement_pos < MAX_MUTANT_CHANGE);
-	       cpos++) {
-	    (*replacement)[replacement_pos++] = *cpos;
-	  }
-	  (*replacement)[replacement_pos++] = rdelim[0];
-	  (*replacement)[replacement_pos] = 0;
-	}
-      }
-    }
+  if (ldelim_start == NULL) return 0;
+  if ((ldelim_start - (char*)*out_buf) >= (*temp_len - 2)) return 0;
+  char* mdelim_end = strnstr(ldelim_start + 1, mdelim,
+                             search_len(*out_buf, *temp_len, ldelim_start + 1, MAX_MUTANT_CHANGE - 1));
+  if (mdelim_end == NULL) return 0;
+  char* rdelim_end = strnstr(mdelim_end + 1, rdelim,
+                             search_len(*out_buf, *temp_len, mdelim_end + 1,
+                                        MAX_MUTANT_CHANGE - 1 - (mdelim_end - ldelim_start)));
+  if (rdelim_end == NULL) return 0;
+  int original_pos = 0;
+  for (char* cpos = ldelim_start + 1; (cpos <= rdelim_end) && (original_pos < MAX_MUTANT_CHANGE);
+       cpos++) {
+    (*original)[original_pos++] = *cpos;
   }
+  (*original)[original_pos] = 0;
+  int replacement_pos = 0;
+  for (char* cpos = mdelim_end + 1; (cpos < rdelim_end) && (replacement_pos < MAX_MUTANT_CHANGE);
+       cpos++) {
+    (*replacement)[replacement_pos++] = *cpos;
+  }
+  (*replacement)[replacement_pos++] = mdelim[0];
+  for (char* cpos = ldelim_start + 1; (cpos < mdelim_end) && (replacement_pos < MAX_MUTANT_CHANGE);
+       cpos++) {
+    (*replacement)[replacement_pos++] = *cpos;
+  }
+  (*replacement)[replacement_pos++] = rdelim[0];
+  (*replacement)[replacement_pos] = 0;
+  return 1;
 }
 
 static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
@@ -5074,13 +5083,14 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   }
 
   char* original = malloc(MAX_MUTANT_CHANGE + 1);
-  char* replacement = malloc(MAX_MUTANT_CHANGE + 1);
+  char* replacement = malloc(2 * MAX_MUTANT_CHANGE + 1);
   strncpy(original, "INVALID", MAX_MUTANT_CHANGE);
   strncpy(replacement, "INVALID", MAX_MUTANT_CHANGE);
   /* Above defaults are to handle when sdels fail */
-  char* opos;
   size_t pos;
+  char* opos = NULL;
   for (size_t i = 0; i < MAX_MUTANT_TRIES; i++) {
+    int found = 1; /* delimiter-based cases set this to 0 when they don't apply */
     pos = UR((*temp_len) - 1);
     int choice = UR(64);
     switch (choice) {
@@ -5243,6 +5253,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
     case 39:
       strncpy(original, "while", MAX_MUTANT_CHANGE);
       strncpy(replacement, "if", MAX_MUTANT_CHANGE);
+      break;
     case 40:
       strncpy(original, "\n", MAX_MUTANT_CHANGE);
       strncpy(replacement, "\nwhile(1==1)\n", MAX_MUTANT_CHANGE);
@@ -5260,65 +5271,69 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
       strncpy(replacement, "", MAX_MUTANT_CHANGE);
       break;
     case 44: /* Remove a semicolon delimited statement after a semicolon */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, ";", ";", ";");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, ";", ";", ";");
       break;
     case 45: /* Remove a semicolon delimited statement after a left curly brace */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "}", ";", "}");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "}", ";", "}");
       break;
     case 46: /* Remove a curly brace construct */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "{", "}", "");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "{", "}", "");
       break;
     case 47: /* Replace a curly brace construct with an empty one */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "{", "}", "{}");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "{", "}", "{}");
       break;
     case 48:
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, ";", ";", ";");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, ";", ";", ";");
       break;
     case 49:
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, "}", ";", ";");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, "}", ";", ";");
       break;
     case 50: /* Swap comma delimited things case 1 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ")");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ")");
       break;
     case 51: /* Swap comma delimited things case 2 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ",");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", ",", ",");
       break;
     case 52: /* Swap comma delimited things case 3 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ",");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ",");
       break;
     case 53: /* Swap comma delimited things case 4 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ")");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, ",", ",", ")");
       break;
     case 54: /* Just delete a line */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "\n", "");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "\n", "");
       break;
     case 55: /* Delete something like "const" case 1 */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, " ", " ", "");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, " ", " ", "");
       break;
     case 56: /* Delete something like "const" case 2 */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", " ", "");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", " ", "");
       break;
     case 57: /* Delete something like "const" case 3 */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "(", " ", "");
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "(", " ", "");
       break;
     case 58: /* Swap space delimited things case 1 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", " ");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", " ");
       break;
     case 59: /* Swap space delimited things case 2 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", ")");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, " ", " ", ")");
       break;
     case 60: /* Swap space delimited things case 3 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", " ");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", " ");
       break;
     case 61: /* Swap space delimited things case 4 */
-      delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", ")");
+      found = delim_swap(out_buf, temp_len, &original, &replacement, pos, "(", " ", ")");
       break;
     case 62: /* Duplicate a single line of code */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "\n", NULL);
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "\n", NULL);
       break;
     case 63: /* Duplicate a construct (most often, a non-nested for loop */
-      delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "}", NULL);
+      found = delim_replace(out_buf, temp_len, &original, &replacement, pos, "\n", "}", NULL);
       break;            
+    }
+    if (!found) {
+      opos = NULL;
+      continue;
     }
     opos = strnstr(*out_buf + pos, original, *temp_len - pos);
     if (opos != NULL) {
@@ -5334,7 +5349,7 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
 
   size_t oplen = opos - ((char*)*out_buf);
   size_t original_len = strnlen(original, MAX_MUTANT_CHANGE);
-  size_t replacement_len = strnlen(replacement, MAX_MUTANT_CHANGE);
+  size_t replacement_len = strnlen(replacement, 2 * MAX_MUTANT_CHANGE);
   size_t mutant_size = *temp_len + (replacement_len - original_len);
 
   if (mutant_size == 0) {
@@ -5357,22 +5372,33 @@ static int use_mutation_tool(u8 **out_buf, s32* temp_len) {
   return 1;
 }
 
-void error(const char *msg) { perror(msg); exit(0); }
-
-#define RESPONSE_OFFSET 8
 #define DEBUG_POST 0
 #define MAX_RESPONSE_SIZE 819200
 
+/* Write all of buf to fd; returns 0 on failure. */
+static int write_all(int fd, const char *buf, size_t len) {
+  while (len > 0) {
+    ssize_t bytes = write(fd, buf, len);
+    if (bytes < 0 && errno == EINTR) continue;
+    if (bytes <= 0) return 0;
+    buf += bytes;
+    len -= bytes;
+  }
+  return 1;
+}
+
+/* POST the current input to the comby-decomposer server and replace it with
+   the response body.  Returns 1 if out_buf was replaced, 0 otherwise.  Any
+   failure (server down, bad response, ...) just returns 0 so the caller falls
+   back to a normal havoc mutation. */
 int post(char *host, int portno, u8 **out_buf, s32 *temp_len) {
+
+  static u8 warned = 0;
 
   // Reject short uninteresting strings.
   if (*temp_len < 5) {
     return 0;
   }
-
-  // Uncomment and use harcoded_src for debugging.
-  // char *hardcoded_src = "contract C { uint immutable x = 0; }";
-  char *hardcoded_src = *out_buf;
 
   // Reject non-ascii.
   for (int i = 0; i < *temp_len; i++) {
@@ -5381,144 +5407,92 @@ int post(char *host, int portno, u8 **out_buf, s32 *temp_len) {
     }
   }
 
-  char *body = malloc(*temp_len+1);
-  snprintf(body, *temp_len, "%s", hardcoded_src);
-  if (DEBUG_POST) {
-    printf("------------------------------\n");
-    printf("len: %d\n", *temp_len);
-    printf("content: %s\n", body);
-  }
-
   portno = portno > 0 ? portno : 80;
   host = strlen(host) > 0 ? host : "localhost";
 
-  struct hostent *server;
-  struct sockaddr_in serv_addr;
-  int sockfd, bytes, sent, received, total, message_size;
-  char *message;
+  char header[256];
+  int header_len = snprintf(header, sizeof(header),
+                            "POST /mutate HTTP/1.0\r\n"
+                            "Content-Type: text/plain\r\n"
+                            "Content-Length: %d\r\n"
+                            "\r\n", *temp_len);
 
-  int response_sz = MAX_RESPONSE_SIZE;
-  char *response = malloc(response_sz); // sloppy: improve by using a Content-Length header from server instead.
-
-  /* How big is the message? */
-  message_size=0;
-  message_size+=strlen("%s %s HTTP/1.0\r\n");
-  message_size+=strlen("POST");                                 /* method         */
-  message_size+=strlen("/mutate");                              /* path           */
-  message_size+=strlen("Content-Type: text/plain\r\n");         /* content-type   */
-  message_size+=strlen("Content-Length: %lu\r\n")+10;           /* content length */
-  message_size+=strlen("\r\n");                                 /* blank line     */
-  message_size+=strlen(body);                                   /* body           */
-
-  /* allocate space for the message */
-  message=malloc(message_size);
-
-  /* fill in the parameters */
-  sprintf(message,"%s %s HTTP/1.0\r\n", "POST", "/mutate");
-  strcat(message, "Content-Type: text/plain\r\n");
-  sprintf(message+strlen(message), "Content-Length: %lu\r\n", strlen(body));
-  strcat(message,"\r\n");
-  strcat(message, body);
-
-  /* What are we going to send? */
   if (DEBUG_POST) {
-    printf("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n");
-    printf("Send: ->\n%s<-\n",message);
-    printf("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n");
+    printf("------------------------------\n");
+    printf("len: %d\n", *temp_len);
+    printf("content: %.*s\n", *temp_len, (char*)*out_buf);
   }
 
-  /* create the socket */
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) error("ERROR opening socket");
+  struct hostent *server = gethostbyname(host);
+  if (server == NULL) {
+    if (!warned) { warned = 1; WARNF("comby server: no such host '%s'", host); }
+    return 0;
+  }
 
-  /* lookup the ip address */
-  server = gethostbyname(host);
-  if (server == NULL) error("ERROR, no such host");
-
-  /* fill in the structure */
-  memset(&serv_addr,0,sizeof(serv_addr));
+  struct sockaddr_in serv_addr;
+  memset(&serv_addr, 0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(portno);
-  memcpy(&serv_addr.sin_addr.s_addr,server->h_addr,server->h_length);
+  memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
-  /* connect the socket */
-  if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
-    error("ERROR connecting");
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) return 0;
 
-  /* send the request */
-  total = strlen(message);
-  sent = 0;
-  do {
-    bytes = write(sockfd,message+sent,total-sent);
-    if (bytes < 0)
-      error("ERROR writing message to socket");
-    if (bytes == 0)
-      break;
-    sent+=bytes;
-  } while (sent < total);
+  if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (!warned) { warned = 1; WARNF("comby server: cannot connect to %s:%d", host, portno); }
+    close(sockfd);
+    return 0;
+  }
+
+  if (!write_all(sockfd, header, header_len) ||
+      !write_all(sockfd, (char*)*out_buf, *temp_len)) {
+    close(sockfd);
+    return 0;
+  }
 
   /* receive the response */
-  memset(response,0,response_sz);
-  total = response_sz-1;
-  received = 0;
-  do {
-    bytes = read(sockfd,response+received,total-received);
-    if (bytes < 0)
-      error("ERROR reading response from socket");
-    if (bytes == 0)
-      break;
-    received+=bytes;
-  } while (received < total);
+  char *response = malloc(MAX_RESPONSE_SIZE);
+  int total = MAX_RESPONSE_SIZE - 1;
+  int received = 0;
+  while (received < total) {
+    ssize_t bytes = read(sockfd, response + received, total - received);
+    if (bytes < 0 && errno == EINTR) continue;
+    if (bytes <= 0) break;
+    received += bytes;
+  }
+  close(sockfd);
 
-  if (received == total){
-    error("ERROR storing complete response from socket");
-    close(sockfd);
-    free(body);
-    free(message);
+  if (received == total) {  /* response too large */
     free(response);
-    return 0; // May make sense to fail hard instead.
+    return 0;
   }
   response[received] = '\0';
 
-  /* close the socket */
-  close(sockfd);
-
-  free(body);
-  free(message);
-
-  /* process response */
-  char* advance;
-  advance = response;
-  int line = 0;
-  while (line != RESPONSE_OFFSET) {
-    if (*advance == '\0') {
-      break;
-    }
-    if (*advance == '\n') {
-      line++;
-    }
-    advance++;
+  /* Check status and find the body after the blank line ending the headers. */
+  char *advance = strstr(response, "\r\n\r\n");
+  if (strncmp(response, "HTTP/1.", 7) != 0 || strncmp(response + 8, " 200", 4) != 0 ||
+      advance == NULL) {
+    free(response);
+    return 0;
   }
+  advance += 4;
 
-  if (line != RESPONSE_OFFSET) {
+  size_t body_len = received - (advance - response);
+  if (body_len == 0) {  /* server found nothing to transform */
     free(response);
     return 0;
   }
 
-  if (strlen(advance) == 0) {
-    free(response);
-    return 0;
-  }
   if (DEBUG_POST) {
     printf("Recv: ->%s<-\n", advance);
     printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
   }
 
-  u8* new_buf = ck_alloc(strlen(advance)+1);
-  memcpy(new_buf, advance, strlen(advance));
+  u8* new_buf = ck_alloc(body_len + 1);
+  memcpy(new_buf, advance, body_len);
   ck_free(*out_buf);
   (*out_buf) = new_buf;
-  (*temp_len) = strlen(advance);
+  (*temp_len) = body_len;
 
   free(response);
   return 1;

@@ -12,6 +12,16 @@ This project is joint work with Rijnard van Tonder, Claire le Goues, and Goutamk
 
 **For details and experimental results, see our [paper](https://agroce.github.io/cc22.pdf) at the [2022 ACM SIGPLAN International Conference on Compiler Construction](https://conf.researchr.org/home/CC-2022).**
 
+# 0.0) Bug fixes since the CC 2022 paper
+
+The experiments in the paper were run with an earlier version that had several bugs, fixed since then. To reproduce the paper's configuration exactly, use the `cc22` tag (`git checkout cc22`). The fixes:
+
+* `while` -> `if` never happened (missing `break`: it fell through to the `while(1==1)` insertion, which was therefore twice as likely as intended).
+* The two duplication operators (duplicate a line, duplicate a `}`-terminated construct such as a loop) replaced text with itself, so they were no-ops that also used up a havoc step.
+* When a delimiter-based operator found no match, the previous attempt's operator could be applied instead.
+* Delimiter searches could read up to 1KB past the end of the input buffer.
+* comby mode: a missing or failed server made `afl-fuzz` exit (with status 0); the last byte of each input was dropped from requests; responses were parsed by assuming exactly 8 header lines. Server failures now just fall back to normal havoc.
+
 # 0.1) USAGE:
 
 `afl-fuzz-compiler` with the same options as `afl-fuzz` will use a fast, but dumb, built-in set of string-based mutations.  As the paper shows, these work pretty well in many cases, and best in some cases. A further enhancement uses [**comby-decomposer**](https://github.com/comby-tools/comby-decomposer) to generate and mutate smarter inputs (so called `splice-mutation` in the paper).  By default `afl-fuzz-compiler` uses code mutation 75% of the time.  You can change this with the `-1` option. The probability to use `comby-decomposer` (default 0%) can be set using `-2`.  The rest of the time, normal AFL mutation will be used.  Note this all only happens in havoc mutations.
