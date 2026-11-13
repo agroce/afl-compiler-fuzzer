@@ -1,5 +1,7 @@
 # 0) Fuzzing compilers
 
+**If you want to use this, you are probably better off not using this, but using the custom mutator in [AFL++](https://github.com/AFLplusplus/AFLplusplus); right now it's landed in the [dev branch](https://github.com/AFLplusplus/AFLplusplus/tree/dev/custom_mutators/compiler_fuzzer), but should move to stable soon.  I'm also preparing a libafl version.**
+
 This is basically afl, run as usual, except that the `afl-fuzz-compiler` executable should (often considerably) improve effectveness when fuzzing any target that takes C-like (in terms of syntax, e.g., Java, Solidity, Rust, C#, Swift, Javascript, Scala, etc. etc.) language files as input.  It has already been used to find a large number of previously unknown bugs in the Solidity smart contract compiler, solc (e.g., https://github.com/ethereum/solidity/issues/8272, https://github.com/ethereum/solidity/issues/8265), earning a bug bounty of $1,000 US from the Ethereum Foundation.  
 
 For the set of bugs found on solc, see the results of [this query](https://github.com/ethereum/solidity/issues?page=2&q=is%3Aissue+afl-compiler-fuzzer+label%3A%22bug+%3Abug%3A%22).  There are also two [blog](https://blog.trailofbits.com/2021/03/23/a-year-in-the-life-of-a-compiler-fuzzing-campaign/) [posts](https://blog.trailofbits.com/2020/06/05/breaking-the-solidity-compiler-with-a-fuzzer/) describing this fuzzing effort in more detail.
